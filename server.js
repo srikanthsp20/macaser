@@ -17,9 +17,6 @@ const fs       = require('fs');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
-const express = require('express');
-const app = express();
-
 // 1. ADD THIS ROUTE HANDLER
 app.get('/', (req, res) => {
   res.send('Server is running smoothly!');
