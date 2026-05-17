@@ -112,7 +112,7 @@ app.get('/api/images', function (req, res) {
 });
 
 /* ── Catch-all: serve index.html for any unknown route ─────────── */
-app.get('*', function (req, res) {
+app.get(':splat*', function (req, res) {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
