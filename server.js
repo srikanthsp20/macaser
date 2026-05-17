@@ -17,6 +17,20 @@ const fs       = require('fs');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
+const express = require('express');
+const app = express();
+
+// 1. ADD THIS ROUTE HANDLER
+app.get('/', (req, res) => {
+  res.send('Server is running smoothly!');
+});
+
+// Your other routes...
+// app.get('/api/users', ...)
+
+app.listen(3000, () => console.log('Server started on port 3000'));
+
+
 /* ── Ensure uploads folder exists ─────────────────────────────── */
 const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
 if (!fs.existsSync(UPLOADS_DIR)) {
