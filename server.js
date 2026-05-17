@@ -111,8 +111,13 @@ app.get('/api/images', function (req, res) {
   });
 });
 
+//  Correct Express 5 syntax 
+//app.get('/*splat', (req, res) => { ... });
+
+//  Alternative: Use a standard Regular Expression literal
+// app.get(/.*/, (req, res) => { ... });
 /* ── Catch-all: serve index.html for any unknown route ─────────── */
-app.get(':splat*', function (req, res) {
+app.get('/*splat', function (req, res) {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
