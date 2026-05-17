@@ -25,7 +25,7 @@ app.get('/', (req, res) => {
 // Your other routes...
 // app.get('/api/users', ...)
 
-app.listen(3000, () => console.log('Server started on port 3000'));
+//app.listen(3000, () => console.log('Server started on port 3000'));
 
 
 /* ── Ensure uploads folder exists ─────────────────────────────── */
@@ -127,8 +127,18 @@ app.get('/api/images', function (req, res) {
 
 //  Alternative: Use a standard Regular Expression literal
 // app.get(/.*/, (req, res) => { ... });
+
+// 1. ADD THIS ROUTE HANDLER
+//app.get('/', (req, res) => {
+//  res.send('Server is running smoothly!');
+//});
+
+// Your other routes...
+// app.get('/api/users', ...)
+
+app.listen(3000, () => console.log('Server started on port 3000'));
 /* ── Catch-all: serve index.html for any unknown route ─────────── */
-app.get('/*splat', function (req, res) {
+app.get('/', function (req, res) {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
