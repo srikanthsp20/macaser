@@ -19,7 +19,7 @@ const PORT = process.env.PORT || 3000;
 
 // 1. ADD THIS ROUTE HANDLER
 app.get('/', (req, res) => {
-  res.send('Server is running smoothly!');
+//  res.send('Server is running smoothly!');
 res.sendFile(path.join(_dirname,index.html));
 });
 
