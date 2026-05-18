@@ -20,13 +20,13 @@ const PORT = process.env.PORT || 3000;
 // 1. ADD THIS ROUTE HANDLER
 app.get('/', (req, res) => {
 //  res.send('Server is running smoothly!');
-res.sendFile(path.join(_dirname,'index.html'));
+   res.sendFile(path.join(__dirname,'index.html'));
 });
 
 // Your other routes...
 // app.get('/api/users', ...)
 
-//app.listen(3000, () => console.log('Server started on port 3000'));
+app.listen(PORT, () => console.log('EXPRESS Server started on port 3000'));
 
 
 /* ── Ensure uploads folder exists ─────────────────────────────── */
