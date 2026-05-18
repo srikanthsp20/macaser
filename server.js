@@ -19,7 +19,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve frontend assets directly from root or public folder
-app.use(express.static(path.join(__dirname)));
+app.use(express.static(__dirname));
 app.use(express.static(path.join(__dirname, 'public')));
 
 /* ── IN-MEMORY PERSISTENT STORE (Blueprint for Global Operations) ── */
