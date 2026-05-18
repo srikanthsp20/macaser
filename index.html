@@ -1452,5 +1452,275 @@ document.addEventListener('keydown',function(e){
   }
 });
 </script>
+
+<script>
+/* ── AUTOMATIC ENVIRONMENT SELECTION ── */
+// Uses host domain context automatically so it works on Localhost AND Render URLs out of the box
+const API_BASE = window.location.origin;
+
+let currentUser = null;
+let currentSelection = {};
+let allMenuItems = [];
+
+// Navigation Engine
+function showPage(pageId) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const targetPage = document.getElementById('page-' + pageId);
+  if(targetPage) targetPage.classList.add('active');
+  
+  if (pageId === 'dashboard' && currentUser) {
+    document.getElementById('dash-username').textContent = currentUser.name;
+    loadMenuGrid();
+  }
+  if (pageId === 'admin') {
+    loadAdminDashboard();
+  }
+}
+
+function goHome() { showPage('home'); }
+
+/* ── USER ACCOUNT REGISTRATION ── */
+async function doRegister() {
+  const name = document.getElementById('reg-name').value.trim();
+  const addr = document.getElementById('reg-addr').value.trim();
+  const phone = document.getElementById('reg-phone').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-pw').value.trim();
+  const msgDiv = document.getElementById('reg-msg');
+
+  try {
+    const res = await fetch(`${API_BASE}/api/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, address: addr, phone, email, password })
+    });
+    const data = await res.json();
+    if (data.success) {
+      msgDiv.innerHTML = `<div class="alert alert-success">${data.message} Please Login.</div>`;
+      setTimeout(() => showPage('login'), 1500);
+    } else {
+      msgDiv.innerHTML = `<div class="alert alert-danger">${data.message}</div>`;
+    }
+  } catch (err) {
+    msgDiv.innerHTML = `<div class="alert alert-danger">Network Error connecting to backend server.</div>`;
+  }
+}
+
+/* ── AUTHENTICATED LOGIN SYSTEM ── */
+async function doLogin() {
+  const name = document.getElementById('login-name').value.trim();
+  const password = document.getElementById('login-pw').value.trim();
+  const msgDiv = document.getElementById('login-msg');
+
+  try {
+    const res = await fetch(`${API_BASE}/api/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, password })
+    });
+    const data = await res.json();
+    if (data.success) {
+      currentUser = data.user;
+      msgDiv.innerHTML = `<div class="alert alert-success">Welcome back, shifting to dashboard...</div>`;
+      setTimeout(() => showPage('dashboard'), 1000);
+    } else {
+      msgDiv.innerHTML = `<div class="alert alert-danger">${data.message}</div>`;
+    }
+  } catch (err) {
+    msgDiv.innerHTML = `<div class="alert alert-danger">Failed to process online authentication request.</div>`;
+  }
+}
+
+/* ── MENU INTERACTION LAYER ── */
+async function loadMenuGrid() {
+  try {
+    const res = await fetch(`${API_BASE}/api/menu`);
+    const data = await res.json();
+    if (data.success) {
+      allMenuItems = data.menuItems;
+      selectMeal('Breakfast');
+    }
+  } catch (e) {
+    console.error("Error pulling database items:", e);
+  }
+}
+
+function selectMeal(type, btn) {
+  if (btn) {
+    document.querySelectorAll('.meal-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  showMenuPanel(type);
+}
+
+function showMenuPanel(filterType = 'Breakfast') {
+  document.getElementById('dash-p1').style.display = 'none';
+  document.getElementById('dash-p2').style.display = 'block';
+  document.getElementById('menu-panel-title').textContent = `${filterType} Menu Selections`;
+  
+  const grid = document.getElementById('menu-grid-wrap');
+  grid.innerHTML = '';
+  
+  const filtered = allMenuItems.filter(item => item.type === filterType);
+  filtered.forEach(item => {
+    const qty = currentSelection[item.id] || 0;
+    const card = document.createElement('div');
+    card.className = 'menu-card';
+    card.innerHTML = `
+      <div class="menu-card-img">&#127858;</div>
+      <div class="menu-card-body">
+        <h4 class="menu-card-name">${item.name}</h4>
+        <p class="menu-card-desc">${item.desc}</p>
+        <div class="menu-card-footer">
+          <span class="menu-price">&#8377;${item.price}</span>
+          <div class="qty-ctrl">
+            <button class="qty-btn" onclick="updateQty('${item.id}', -1)">-</button>
+            <span class="qty-val" id="qty-${item.id}">${qty}</span>
+            <button class="qty-btn" onclick="updateQty('${item.id}', 1)">+</button>
+          </div>
+        </div>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+  recalcSummary();
+}
+
+function updateQty(id, delta) {
+  let current = currentSelection[id] || 0;
+  current += delta;
+  if (current < 0) current = 0;
+  if (current === 0) delete currentSelection[id];
+  else currentSelection[id] = current;
+  
+  const label = document.getElementById(`qty-${id}`);
+  if (label) label.textContent = current;
+  recalcSummary();
+}
+
+function recalcSummary() {
+  let total = 0;
+  let itemsCount = 0;
+  const rowsDiv = document.getElementById('summary-rows');
+  rowsDiv.innerHTML = '';
+  
+  for (const id in currentSelection) {
+    const item = allMenuItems.find(m => m.id === id);
+    if (item) {
+      const qty = currentSelection[id];
+      total += item.price * qty;
+      itemsCount += qty;
+      rowsDiv.innerHTML += `<div class="order-row"><span>${item.name} (x${qty})</span><span>&#8377;${item.price * qty}</span></div>`;
+    }
+  }
+  
+  document.getElementById('summary-total').textContent = `\u20B9${total}`;
+  document.getElementById('dash-summary').style.display = itemsCount > 0 ? 'block' : 'none';
+  document.getElementById('btn-proceed-menu').disabled = itemsCount === 0;
+}
+
+function dashBack() {
+  document.getElementById('dash-p2').style.display = 'none';
+  document.getElementById('dash-p3').style.display = 'none';
+  document.getElementById('dash-p4').style.display = 'none';
+  document.getElementById('dash-p1').style.display = 'block';
+}
+
+function dashCheckout() {
+  document.getElementById('dash-p2').style.display = 'none';
+  document.getElementById('dash-p4').style.display = 'block';
+  
+  const checkoutWrap = document.getElementById('checkout-order-summary');
+  checkoutWrap.innerHTML = document.getElementById('summary-rows').innerHTML + document.getElementById('dash-summary').querySelector('.order-total').outerHTML;
+  
+  document.getElementById('co-name').value = currentUser.name;
+  document.getElementById('co-phone').value = currentUser.phone;
+}
+
+/* ── SECURE ORDER PLACEMENT SAVED TO SERVER ── */
+async function placeOrder() {
+  const items = [];
+  for (const id in currentSelection) {
+    const match = allMenuItems.find(m => m.id === id);
+    if(match) items.push({ id, name: match.name, qty: currentSelection[id], subtotal: match.price * currentSelection[id] });
+  }
+  
+  const payload = {
+    user: currentUser,
+    items,
+    total: document.getElementById('summary-total').textContent,
+    eventDate: document.getElementById('co-date').value,
+    remarks: document.getElementById('co-remarks').value,
+    payment: document.getElementById('co-payment').value,
+    callbackRequested: document.getElementById('co-callback').checked
+  };
+
+  try {
+    const res = await fetch(`${API_BASE}/api/orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if(data.success) {
+      document.getElementById('checkout-msg').innerHTML = `<div class="alert alert-success">${data.message} Order ID: ${data.order.id}</div>`;
+      currentSelection = {};
+      setTimeout(() => { showPage('home'); dashBack(); }, 2500);
+    }
+  } catch(e) {
+    document.getElementById('checkout-msg').innerHTML = `<div class="alert alert-danger">Error writing order dataset down to cloud memory database.</div>`;
+  }
+}
+
+/* ── BACKEND ADMINISTRATIVE AGGREGATION SYSTEM ── */
+async function doAdminLogin() {
+  const password = document.getElementById('adm-pw').value;
+  try {
+    const res = await fetch(`${API_BASE}/api/admin-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showPage('admin');
+    } else {
+      document.getElementById('adm-login-msg').innerHTML = `<div class="alert alert-danger">${data.message}</div>`;
+    }
+  } catch(e) {
+     document.getElementById('adm-login-msg').innerHTML = `<div class="alert alert-danger">Admin Service context error.</div>`;
+  }
+}
+
+async function loadAdminDashboard() {
+  try {
+    const res = await fetch(`${API_BASE}/api/admin/data`);
+    const data = await res.json();
+    if(data.success) {
+      const wrapper = document.getElementById('orders-table-wrap');
+      if(data.orders.length === 0) {
+        wrapper.innerHTML = `<p class="text-muted text-center">No active orders placed across global instances yet.</p>`;
+        return;
+      }
+      let html = `<table><thead><tr><th>Order ID</th><th>Customer</th><th>Phone</th><th>Date</th><th>Total</th><th>Status</th></tr></thead><tbody>`;
+      data.orders.forEach(o => {
+        html += `<tr><td><strong>${o.id}</strong></td><td>${o.user.name}</td><td>${o.user.phone}</td><td>${o.eventDate}</td><td>${o.total}</td><td><span class="badge badge-warning">${o.status}</span></td></tr>`;
+      });
+      html += `</tbody></table>`;
+      wrapper.innerHTML = html;
+    }
+  } catch(e) { console.error("Could not fetch cloud tables", e); }
+}
+
+function admTab(tabName, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  const targetPanel = document.getElementById('adm-' + tabName);
+  if(targetPanel) targetPanel.classList.add('active');
+}
+</script>
+
+
 </body>
 </html>
