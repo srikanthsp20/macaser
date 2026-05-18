@@ -1,150 +1,129 @@
 /**
  * Mangalam Catering Services – Node.js/Express Server
  * ----------------------------------------------------
- * Serves the frontend (public/) and handles image uploads.
- * Images are saved to public/uploads/ and served as static files.
- *
- * Usage:
- *   node server.js          (port 3000 by default)
- *   PORT=8080 node server.js
+ * Serves the frontend (public/) and handles operational requests.
  */
 
 const express  = require('express');
 const multer   = require('multer');
 const path     = require('path');
 const fs       = require('fs');
+const cors     = require('cors');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
-// 1. ADD THIS ROUTE HANDLER
+// Enable cross-device processing middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Serve frontend assets directly from root or public folder
+app.use(express.static(path.join(__dirname)));
+app.use(express.static(path.join(__dirname, 'public')));
+
+/* ── IN-MEMORY PERSISTENT STORE (Blueprint for Global Operations) ── */
+let DATA_STORE = {
+  users: [],
+  orders: [],
+  menuItems: [
+    { id: "1", name: "Idli Sambar", type: "Breakfast", price: 80, desc: "Soft fluffy steamed rice cakes served with authentic sambar." },
+    { id: "2", name: "Masala Dosa", type: "Breakfast", price: 100, desc: "Crispy crepe filled with lightly spiced potato mash." },
+    { id: "3", name: "South Indian Meals", type: "Lunch", price: 150, desc: "Rice, Sambar, Rasam, Kootu, Poriyal, Curd, and Appalam." },
+    { id: "4", name: "Veg Biryani", type: "Dinner", price: 140, desc: "Fragrant basmati rice cooked with assorted vegetables and spices." }
+  ],
+  combos: [],
+  adminPassword: "admin"
+};
+
+/* ── PAGE BASE ROUTE ─────────────────────────────────────────── */
 app.get('/', (req, res) => {
-//  res.send('Server is running smoothly!');
-   res.sendFile(path.join(__dirname,'index.html'));
+   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Your other routes...
-// app.get('/api/users', ...)
+/* ── API ENDPOINTS FOR CROSS-DEVICE SYNCHRONIZATION ───────────── */
 
-app.listen(PORT, () => console.log('EXPRESS Server started on port 3000'));
+// 1. Authentication APIs
+app.post('/api/register', (req, res) => {
+  const { name, address, phone, email, password } = req.body;
+  if (!name || !phone || !email || !password) {
+    return res.status(400).json({ success: false, message: 'Please fill in all required fields.' });
+  }
+  const existingUser = DATA_STORE.users.find(u => u.email === email || u.phone === phone);
+  if (existingUser) {
+    return res.status(400).json({ success: false, message: 'User already exists with this email or phone.' });
+  }
+  const newUser = { id: Date.now().toString(), name, address, phone, email, password };
+  DATA_STORE.users.push(newUser);
+  res.json({ success: true, message: 'Registration successful!', user: newUser });
+});
 
+app.post('/api/login', (req, res) => {
+  const { name, password } = req.body;
+  const user = DATA_STORE.users.find(u => u.name === name && u.password === password);
+  if (!user) {
+    return res.status(401).json({ success: false, message: 'Invalid name or password.' });
+  }
+  res.json({ success: true, message: 'Login successful.', user });
+});
 
-/* ── Ensure uploads folder exists ─────────────────────────────── */
+app.post('/api/admin-login', (req, res) => {
+  const { password } = req.body;
+  if (password === DATA_STORE.adminPassword) {
+    res.json({ success: true });
+  } else {
+    res.status(401).json({ success: false, message: 'Incorrect Admin Password.' });
+  }
+});
+
+// 2. Core Dashboard System APIs
+app.get('/api/menu', (req, res) => {
+  res.json({ success: true, menuItems: DATA_STORE.menuItems });
+});
+
+app.post('/api/orders', (req, res) => {
+  const { user, items, total, eventDate, remarks, payment, callbackRequested } = req.body;
+  if (!user || !items || items.length === 0) {
+    return res.status(400).json({ success: false, message: 'Order cannot be empty.' });
+  }
+  const newOrder = {
+    id: "MNG-" + Math.floor(1000 + Math.random() * 9000),
+    user,
+    items,
+    total,
+    eventDate: eventDate || 'Not specified',
+    remarks: remarks || '',
+    payment: payment || 'Pending',
+    callbackRequested: callbackRequested || false,
+    status: 'Pending',
+    createdAt: new Date().toLocaleString()
+  };
+  DATA_STORE.orders.push(newOrder);
+  res.json({ success: true, message: 'Order placed successfully!', order: newOrder });
+});
+
+// 3. Admin Management Dash APIs
+app.get('/api/admin/data', (req, res) => {
+  res.json({
+    success: true,
+    orders: DATA_STORE.orders,
+    users: DATA_STORE.users,
+    menuItems: DATA_STORE.menuItems,
+    combos: DATA_STORE.combos
+  });
+});
+
+app.post('/api/admin/change-password', (req, res) => {
+  const { password } = req.body;
+  if (!password) return res.status(400).json({ success: false, message: 'Password missing.' });
+  DATA_STORE.adminPassword = password;
+  res.json({ success: true, message: 'Password updated successfully!' });
+});
+
+/* ── Ensure uploads directory structure exists safely ─────────── */
 const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
 if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
 
-/* ── Multer storage config ─────────────────────────────────────── */
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, UPLOADS_DIR);
-  },
-  filename: function (req, file, cb) {
-    // e.g.  1716123456789-idli-sambar.jpg
-    const ext      = path.extname(file.originalname).toLowerCase();
-    const safeName = path.basename(file.originalname, ext)
-                       .replace(/[^a-z0-9_\-]/gi, '-')
-                       .slice(0, 60)
-                       .toLowerCase();
-    cb(null, Date.now() + '-' + safeName + ext);
-  }
-});
-
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-const MAX_SIZE_MB   = 5;
-
-const upload = multer({
-  storage,
-  limits: { fileSize: MAX_SIZE_MB * 1024 * 1024 },
-  fileFilter: function (req, file, cb) {
-    if (ALLOWED_TYPES.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only JPG, PNG, WebP and GIF images are allowed.'));
-    }
-  }
-});
-
-/* ── Serve static frontend files ───────────────────────────────── */
-app.use(express.static(path.join(__dirname, 'public')));
-
-/* ── POST /api/upload-image ─────────────────────────────────────
-   Accepts:  multipart/form-data  field name: "image"
-   Returns:  { success: true, url: "/uploads/filename.jpg" }
-             { success: false, error: "..." }
-─────────────────────────────────────────────────────────────── */
-app.post('/api/upload-image', function (req, res) {
-  upload.single('image')(req, res, function (err) {
-    if (err) {
-      const msg = err.code === 'LIMIT_FILE_SIZE'
-        ? 'File too large (max ' + MAX_SIZE_MB + ' MB).'
-        : err.message || 'Upload failed.';
-      return res.status(400).json({ success: false, error: msg });
-    }
-    if (!req.file) {
-      return res.status(400).json({ success: false, error: 'No file received.' });
-    }
-    const url = '/uploads/' + req.file.filename;
-    res.json({ success: true, url });
-  });
-});
-
-/* ── DELETE /api/delete-image ───────────────────────────────────
-   Body (JSON):  { "filename": "1716123456789-idli.jpg" }
-   Only deletes files that live inside public/uploads/ (safe).
-─────────────────────────────────────────────────────────────── */
-app.use(express.json());
-
-app.delete('/api/delete-image', function (req, res) {
-  const filename = (req.body && req.body.filename) ? req.body.filename : '';
-  if (!filename || filename.includes('/') || filename.includes('\\')) {
-    return res.status(400).json({ success: false, error: 'Invalid filename.' });
-  }
-  const filePath = path.join(UPLOADS_DIR, filename);
-  fs.unlink(filePath, function (err) {
-    if (err) {
-      return res.status(404).json({ success: false, error: 'File not found.' });
-    }
-    res.json({ success: true });
-  });
-});
-
-/* ── GET /api/images ────────────────────────────────────────────
-   Returns list of all uploaded images (for image picker).
-─────────────────────────────────────────────────────────────── */
-app.get('/api/images', function (req, res) {
-  fs.readdir(UPLOADS_DIR, function (err, files) {
-    if (err) return res.json({ images: [] });
-    const images = files
-      .filter(f => /\.(jpe?g|png|webp|gif)$/i.test(f))
-      .map(f => ({ filename: f, url: '/uploads/' + f }));
-    res.json({ images });
-  });
-});
-
-//  Correct Express 5 syntax 
-//app.get('/*splat', (req, res) => { ... });
-
-//  Alternative: Use a standard Regular Expression literal
-// app.get(/.*/, (req, res) => { ... });
-
-// 1. ADD THIS ROUTE HANDLER
-//app.get('/', (req, res) => {
-//  res.send('Server is running smoothly!');
-//});
-
-// Your other routes...
-// app.get('/api/users', ...)
-
-app.listen(3000, () => console.log('Server started on port 3000'));
-/* ── Catch-all: serve index.html for any unknown route ─────────── */
-app.get('/', function (req, res) {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-/* ── Start ─────────────────────────────────────────────────────── */
-app.listen(PORT, function () {
-  console.log('✅  Mangalam server running at http://localhost:' + PORT);
-  console.log('📁  Images stored in: ' + UPLOADS_DIR);
-});
+app.listen(PORT, () => console.log(`EXPRESS Server running globally on port ${PORT}`));
