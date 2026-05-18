@@ -82,20 +82,20 @@ const upload = multer({
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
-});*/
+});
 
 
 const express = require('express');
-const multer = require('multer');
+const multer = require('multer');*/
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const cors = require('cors');
+/*const cors = require('cors');
 const path = require('path');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-
+*/
 /* ── CLOUDINARY CONFIGURATION ── */
 // Get these free credentials by signing up at Cloudinary.com
 cloudinary.config({
