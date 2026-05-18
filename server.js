@@ -40,6 +40,49 @@ let DATA_STORE = {
 app.get('/', (req, res) => {
    res.sendFile(path.join(__dirname, 'index.html'));
 });
+/* ── MULTER STORAGE CONFIGURATION ── */
+const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, UPLOADS_DIR);
+  },
+  filename: function (req, file, cb) {
+    // Generates a unique timeline timestamp prefix to avoid filename collision drops
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB Limit cap
+});
+
+/* ── MULTIPART FILE UPLOAD ENDPOINT ── */
+// Ensure 'image' matches the name appended inside formData in your frontend index.html script block!
+app.post('/api/upload', upload.single('image'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No file received by backend server structure.' });
+    }
+    
+    // Generates the static file relative url link
+    const fileUrl = '/uploads/' + req.file.filename;
+    
+    res.json({
+      success: true,
+      message: 'Asset verified and saved.',
+      url: fileUrl,
+      filename: req.file.filename
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
 
 /* ── API ENDPOINTS FOR CROSS-DEVICE SYNCHRONIZATION ───────────── */
 
