@@ -45,7 +45,7 @@ const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
 if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
-
+/*
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, UPLOADS_DIR);
@@ -61,10 +61,10 @@ const upload = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB Limit cap
 });
-
+*/
 /* ── MULTIPART FILE UPLOAD ENDPOINT ── */
 // Ensure 'image' matches the name appended inside formData in your frontend index.html script block!
-app.post('/api/upload', upload.single('image'), (req, res) => {
+/*app.post('/api/upload', upload.single('image'), (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, error: 'No file received by backend server structure.' });
@@ -82,7 +82,58 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
+});*/
+
+
+const express = require('express');
+const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const cors = require('cors');
+const path = require('path');
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+/* ── CLOUDINARY CONFIGURATION ── */
+// Get these free credentials by signing up at Cloudinary.com
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_NAME || 'dosxpozyt',
+  api_key:    process.env.CLOUDINARY_KEY  || '231858439383224',
+  api_secret: process.env.CLOUDINARY_SECRET || '*********************************'
 });
+
+/* ── ROUTE MULTER STORAGE DIRECTLY TO THE CLOUD ── */
+const cloudStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'mangalam_menu', 
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+    transformation: [{ width: 600, height: 400, crop: 'limit' }] // Auto-resizes for fast mobile loading
+  }
+});
+
+const upload = multer({ storage: cloudStorage });
+
+/* ── POST /api/upload ── */
+app.post('/api/upload', upload.single('image'), (req, res) => {
+  try {
+    if (!req.file || !req.file.path) {
+      return res.status(400).json({ success: false, error: 'No file received by the server.' });
+    }
+    
+    // req.file.path is now a permanent global HTTPS URL provided by Cloudinary
+    res.json({
+      success: true,
+      message: 'Image securely saved to Cloud Storage!',
+      url: req.file.path 
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 
 /* ── API ENDPOINTS FOR CROSS-DEVICE SYNCHRONIZATION ───────────── */
 
