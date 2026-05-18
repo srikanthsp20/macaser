@@ -1326,10 +1326,55 @@ function switchImgTab(tab) {
   });
   if(tab==='library') loadImgLibrary();
 }
+async function handleImgFileUpload(inputElement) {
+  const file = inputElement.files[0];
+  const statusDiv = document.getElementById('img-upload-status');
+  
+  if (!file) return;
 
-function handleImgFileUpload(input) {
-  var file = input.files && input.files[0];
-  if(!file) return;
+  // Validate client side constraint before hitting the server pipeline
+  if (file.size > 5 * 1024 * 1024) {
+    statusDiv.innerHTML = `<span style="color:var(--danger)">&#215; File is too large. Max 5MB allowed.</span>`;
+    return;
+  }
+
+  statusDiv.innerHTML = `<span style="color:var(--muted)"><div class="spinner"></div> Uploading asset to server...</span>`;
+
+  // Wrap file inside FormData body context
+  const formData = new FormData();
+  formData.append('image', file); // 'image' MUST match your multer endpoint check exactly
+
+  try {
+    // Relative API call context ensures this functions flawlessly from any phone/PC online
+    const res = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData
+      // Note: Do NOT add 'Content-Type' headers manually here; the browser needs to structure multipart boundaries!
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      statusDiv.innerHTML = `<span style="color:var(--success)">&#10003; Image uploaded successfully!</span>`;
+      
+      // Set your image input field hidden path value to point to the new image URL asset paths
+      if (document.getElementById('mi-img')) {
+        document.getElementById('mi-img').value = data.url; 
+      }
+      
+      // If you have a real-time thumbnail preview active on your admin modal layout:
+      showImgPreview(data.url);
+    } else {
+      statusDiv.innerHTML = `<span style="color:var(--danger)">&#215; Upload failed: ${data.error || 'Unknown server fault'}</span>`;
+    }
+  } catch (err) {
+    console.error("Upload process error context:", err);
+    statusDiv.innerHTML = `<span style="color:var(--danger)">&#215; Network error- Is server running?</span>`;
+  }
+}
+//function handleImgFileUpload(input) {
+//  var file = input.files && input.files[0];
+/*  if(!file) return;
   var statusEl = document.getElementById('img-upload-status');
   var dropZone = document.getElementById('img-drop-zone');
   if(file.size > 5*1024*1024) {
@@ -1358,7 +1403,7 @@ function handleImgFileUpload(input) {
       statusEl.innerHTML = '<span style="color:var(--danger);">&#10005; Network error. Is the server running?</span>';
       input.value='';
     });
-}
+}*/
 
 function applyImgUrl() {
   var val = (document.getElementById('mi-img-url').value||'').trim();
