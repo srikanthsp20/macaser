@@ -86,7 +86,42 @@ const upload = multer({
 const upload = multer({ storage: cloudStorage });
 /* ── UPLOAD ENDPOINT ROUTE ── */
 // 'upload.single('image')' MUST capture the exact key string sent via your FormData
-app.post('/api/upload', upload.single('image'), (req, res) => {
+
+
+/* ── MULTER ERROR-HANDLING ENDPOINT ── */
+// 'image' must perfectly match the string used in formData.append('image', file)
+app.post('/api/upload', (req, res) => {
+  upload.single('image')(req, res, function (err) {
+    if (err instanceof multer.MulterError) {
+      // A Multer error occurred when uploading (e.g., file too large)
+      console.error("Multer Error:", err);
+      return res.status(400).json({ success: false, error: `Multer error: ${err.message}` });
+    } else if (err) {
+      // An unknown error occurred (e.g., Cloudinary credentials are broken)
+      console.error("Cloudinary Configuration Error:", err);
+      return res.status(500).json({ success: false, error: `Cloud setup error: ${err.message}` });
+    }
+
+    // Check if file actually reached the route safely
+    if (!req.file || !req.file.path) {
+      return res.status(400).json({ success: false, error: 'No file stream detected by server.' });
+    }
+
+    // Success! Return secure URL back to index.html
+    console.log("Uploaded successfully to Cloudinary:", req.file.path);
+    res.json({
+      success: true,
+      message: 'Image uploaded successfully to Cloudinary!',
+      url: req.file.path
+    });
+  });
+});
+
+
+
+
+
+/*app.post('/api/upload', upload.single('image'), (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, error: 'No file reached the server pipeline.' });
@@ -104,7 +139,7 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
     res.status(500).json({ success: false, error: err.message });
   }
 });
-
+*/
 
 
 
