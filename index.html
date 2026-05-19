@@ -1332,6 +1332,60 @@ async function handleImgFileUpload(inputElement) {
   
   if (!file) return;
 
+  // 1. Quick client-side size check (5MB max)
+  if (file.size > 5 * 1024 * 1024) {
+    statusDiv.innerHTML = `<span style="color:var(--danger)">&#215; File is too large. Max 5MB allowed.</span>`;
+    return;
+  }
+
+  statusDiv.innerHTML = `<span style="color:var(--muted)">Uploading image to secure server...</span>`;
+
+  // 2. Wrap file inside a FormData container
+  const formData = new FormData();
+  // CRITICAL: The key name 'image' must match your Multer backend variable exactly!
+  formData.append('image', file); 
+
+  try {
+    // Using a relative path '/api/upload' prevents cross-domain network drops
+    const res = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData
+      // NOTE: Do NOT add a 'Content-Type' header here. 
+      // Letting the browser set the boundary automatically fixes network errors!
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      statusDiv.innerHTML = `<span style="color:var(--success)">&#10003; Upload complete!</span>`;
+      
+      // Save the returned image path to your hidden input field form
+      if (document.getElementById('mi-img')) {
+        document.getElementById('mi-img').value = data.url; 
+      }
+    } else {
+      statusDiv.innerHTML = `<span style="color:var(--danger)">&#215; Failed: ${data.error}</span>`;
+    }
+  } catch (err) {
+    console.error("Upload error details:", err);
+    statusDiv.innerHTML = `<span style="color:var(--danger)">&#215; Network error- Is server running?</span>`;
+  }
+}
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  /*async function handleImgFileUpload(inputElement) {
+  const file = inputElement.files[0];
+  const statusDiv = document.getElementById('img-upload-status');
+  
+  if (!file) return;
+
   // Validate client side constraint before hitting the server pipeline
   if (file.size > 5 * 1024 * 1024) {
     statusDiv.innerHTML = `<span style="color:var(--danger)">&#215; File is too large. Max 5MB allowed.</span>`;
@@ -1374,7 +1428,7 @@ async function handleImgFileUpload(inputElement) {
 }
 //function handleImgFileUpload(input) {
 //  var file = input.files && input.files[0];
-/*  if(!file) return;
+  if(!file) return;
   var statusEl = document.getElementById('img-upload-status');
   var dropZone = document.getElementById('img-drop-zone');
   if(file.size > 5*1024*1024) {
