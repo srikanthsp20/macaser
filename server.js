@@ -3,6 +3,13 @@
  * ----------------------------------------------------
  * Serves the frontend (public/) and handles operational requests.
  */
+/**
+ * Mangalam Catering Services – Node.js/Express Server
+ * ----------------------------------------------------
+ * Serves the frontend and handles cross-device operational sync.
+ * Persists orders, users, and menu data to a JSON store file.
+ * Automatically saves image assets to Cloudinary Cloud Storage.
+ */
 
 const express  = require('express');
 const multer   = require('multer');
@@ -15,15 +22,21 @@ const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
+// ── MIDDLEWARE INTEGRATION ──
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(__dirname));
+app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(__dirname)); // Fallback path for index.html at root
 
-// ── PERSISTENT FILE PATH (Must sit on a Render Persistent Disk to survive restarts) ──
-const DB_FILE = path.join(__dirname, 'public', 'uploads', 'db_store.json');
+// ── PERSISTENT FILE SYSTEM ALLOCATION ──
+const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+const DB_FILE = path.join(UPLOADS_DIR, 'db_store.json');
 
-// Helper to safely load data
+// Helper to safely load data from disk file
 function loadGlobalData() {
   try {
     if (fs.existsSync(DB_FILE)) {
@@ -36,14 +49,17 @@ function loadGlobalData() {
     users: [],
     orders: [],
     menuItems: [
-      { id: "1", name: "Idli Sambar", type: "Breakfast", price: 80, desc: "Soft fluffy steamed rice cakes.", image: "" },
-      { id: "2", name: "Masala Dosa", type: "Breakfast", price: 100, desc: "Crispy crepe filled with potato mash.", image: "" }
+      { id: "1", name: "Idli Sambar", type: "Breakfast", price: 80, desc: "Soft fluffy steamed rice cakes served with authentic sambar.", image: "" },
+      { id: "2", name: "Masala Dosa", type: "Breakfast", price: 100, desc: "Crispy crepe filled with lightly spiced potato mash.", image: "" },
+      { id: "3", name: "South Indian Meals", type: "Lunch", price: 150, desc: "Rice, Sambar, Rasam, Kootu, Poriyal, Curd, and Appalam.", image: "" },
+      { id: "4", name: "Veg Biryani", type: "Dinner", price: 140, desc: "Fragrant basmati rice cooked with assorted vegetables and spices.", image: "" }
     ],
+    combos: [],
     adminPassword: "admin"
   };
 }
 
-// Helper to safely save data
+// Helper to safely save data to disk file
 function saveGlobalData(data) {
   try {
     fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
@@ -52,351 +68,64 @@ function saveGlobalData(data) {
   }
 }
 
-// Initialize store
+// Initialize internal application data layer
 let DATA_STORE = loadGlobalData();
 
-/* ── CLOUDINARY CONFIG ── */
+/* ── SECURE CLOUDINARY MEDIA CONFIGURATION ── */
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_NAME,
   api_key:    process.env.CLOUDINARY_KEY,
   api_secret: process.env.CLOUDINARY_SECRET
 });
 
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'mangalam_menu',
-    allowed_formats: ['jpg', 'jpeg', 'png', 'webp']
-  }
-});
-const upload = multer({ storage: storage });
-
-/* ── RE-SYNCHRONIZED CORE API ENDPOINTS ── */
-
-// Fetch Admin Data Engine (Called by other devices continuously)
-app.get('/api/admin/data', (req, res) => {
-  // Always refresh memory layer from disk before serving external devices
-  DATA_STORE = loadGlobalData();
-  res.json({
-    success: true,
-    orders: DATA_STORE.orders,
-    users: DATA_STORE.users,
-    menuItems: DATA_STORE.menuItems
-  });
-});
-
-// Update Menu Items with Cloudinary URL
-app.post('/api/admin/add-item', (req, res) => {
-  DATA_STORE = loadGlobalData();
-  const { name, type, price, desc, image } = req.body;
-  
-  const newItem = {
-    id: Date.now().toString(),
-    name,
-    type,
-    price: parseFloat(price),
-    desc,
-    image: image // This must be the absolute https://res.cloudinary.com link!
-  };
-  
-  DATA_STORE.menuItems.push(newItem);
-  saveGlobalData(DATA_STORE); // Write instantly to shared file
-  res.json({ success: true, menuItems: DATA_STORE.menuItems });
-});
-
-// Post Order Endpoint
-app.post('/api/orders', (req, res) => {
-  DATA_STORE = loadGlobalData();
-  const { user, items, total, eventDate, remarks } = req.body;
-  
-  const newOrder = {
-    id: "MNG-" + Math.floor(1000 + Math.random() * 9000),
-    user,
-    items,
-    total,
-    eventDate,
-    remarks,
-    status: 'Pending',
-    createdAt: new Date().toLocaleString()
-  };
-  
-  DATA_STORE.orders.push(newOrder);
-  saveGlobalData(DATA_STORE);
-  res.json({ success: true, message: 'Order placed successfully!', order: newOrder });
-});
-
-// Cloudinary Upload API
-app.post('/api/upload', upload.single('image'), (req, res) => {
-  if (!req.file || !req.file.path) {
-    return res.status(400).json({ success: false, error: 'Cloudinary upload failed.' });
-  }
-  res.json({ success: true, url: req.file.path });
-});
-
-//app.listen(PORT, () => console.log(`Sync Server listening on ${PORT}`));
-
-
-
-
-
-
-
-
-
-
-
-
-
-/*
-const express  = require('express');
-const multer   = require('multer');
-const path     = require('path');
-const fs       = require('fs');
-const cors     = require('cors');
-
-const app  = express();
-const PORT = process.env.PORT || 3000;
-
-// Enable cross-device processing middleware
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-//const multer = require('multer');
-
-// Secure Configuration mapping
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_NAME,
-  api_key:    process.env.CLOUDINARY_KEY,
-  api_secret: process.env.CLOUDINARY_SECRET
-});
-
-// Streamlined cloud storage layout
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: async (req, file) => {
-    return {
-      folder: 'mangalam_menu',
-      // Explicitly matching the exact allowed parameters expected by Cloudinary's validator
-      allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
-      // We pass transformation properties directly in an array format to resolve string formatting glitches
-      transformation: [{ width: 600, height: 400, crop: 'limit' }]
-    };
-  }
-});
-const upload = multer({ storage: storage });
-*/
-
-
-
-// Serve frontend assets directly from root or public folder
-//app.use(express.static(__dirname));
-app.use(express.static(path.join(__dirname, 'public')));
-
-/* ── IN-MEMORY PERSISTENT STORE (Blueprint for Global Operations) ── */
-/*let DATA_STORE = {
-  users: [],
-  orders: [],
-  menuItems: [
-    { id: "1", name: "Idli Sambar", type: "Breakfast", price: 80, desc: "Soft fluffy steamed rice cakes served with authentic sambar." },
-    { id: "2", name: "Masala Dosa", type: "Breakfast", price: 100, desc: "Crispy crepe filled with lightly spiced potato mash." },
-    { id: "3", name: "South Indian Meals", type: "Lunch", price: 150, desc: "Rice, Sambar, Rasam, Kootu, Poriyal, Curd, and Appalam." },
-    { id: "4", name: "Veg Biryani", type: "Dinner", price: 140, desc: "Fragrant basmati rice cooked with assorted vegetables and spices." }
-  ],
-  combos: [],
-  adminPassword: "admin"
-};
-*/
-/* ── PAGE BASE ROUTE ─────────────────────────────────────────── */
-app.get('/', (req, res) => {
-   res.sendFile(path.join(__dirname, 'index.html'));
-});
-/* ── MULTER HARD DRIVE ALLOCATION ── */
-const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-}
-
-/*const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, UPLOADS_DIR);
-  },
-  filename: function (req, file, cb) {
-    // Prefix filenames with a timestamp to prevent overwriting duplicate files
-    const uniquePrefix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniquePrefix + path.extname(file.originalname));
-  }
-});
-*/
 const cloudStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
     folder: 'mangalam_menu', 
     allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
-    transformation: [{ width: 600, height: 400, crop: 'limit' }] // Auto-resizes for fast mobile loading
+    transformation: [{ width: 600, height: 400, crop: 'limit' }]
   }
 });
 
-
-
-/*
 const upload = multer({ 
-  storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limits
-});*/
-//const upload = multer({ storage: cloudStorage });
-/* ── UPLOAD ENDPOINT ROUTE ── */
-// 'upload.single('image')' MUST capture the exact key string sent via your FormData
+  storage: cloudStorage,
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB File constraint cap
+});
 
+/* ── MAIN ROOT APPLICATION ROUTE ── */
+app.get('/', (req, res) => {
+   res.sendFile(path.join(__dirname, 'index.html'));
+});
 
-/* ── MULTER ERROR-HANDLING ENDPOINT ── */
-// 'image' must perfectly match the string used in formData.append('image', file)
+/* ── ERROR-HANDLING SECURE FILE UPLOAD API ── */
 app.post('/api/upload', (req, res) => {
   upload.single('image')(req, res, function (err) {
     if (err instanceof multer.MulterError) {
-      // A Multer error occurred when uploading (e.g., file too large)
-      console.error("Multer Error:", err);
-      return res.status(400).json({ success: false, error: `Multer error: ${err.message}` });
+      console.error("Multer Runtime Error:", err);
+      return res.status(400).json({ success: false, error: `Multer configuration fault: ${err.message}` });
     } else if (err) {
-      // An unknown error occurred (e.g., Cloudinary credentials are broken)
-      console.error("Cloudinary Configuration Error:", err);
-      return res.status(500).json({ success: false, error: `Cloud setup error: ${err.message}` });
+      console.error("Cloudinary Configuration/Connection Error:", err);
+      return res.status(500).json({ success: false, error: `Cloud configuration setup fault: ${err.message}` });
     }
 
-    // Check if file actually reached the route safely
     if (!req.file || !req.file.path) {
-      return res.status(400).json({ success: false, error: 'No file stream detected by server.' });
+      return res.status(400).json({ success: false, error: 'No file context streamed to target route.' });
     }
 
-    // Success! Return secure URL back to index.html
-    console.log("Uploaded successfully to Cloudinary:", req.file.path);
+    console.log("Asset successfully pushed to Cloudinary:", req.file.path);
     res.json({
       success: true,
-      message: 'Image uploaded successfully to Cloudinary!',
+      message: 'Image securely saved to Cloud Storage!',
       url: req.file.path
     });
   });
 });
 
+/* ── CORE CROSS-DEVICE OPERATIONAL ENDPOINTS ── */
 
-
-
-
-/*app.post('/api/upload', upload.single('image'), (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ success: false, error: 'No file reached the server pipeline.' });
-    }
-    
-    // Construct the static file path string
-    const relativeUrlPath = '/uploads/' + req.file.filename;
-    
-    res.json({
-      success: true,
-      message: 'Asset saved successfully.',
-      url: relativeUrlPath
-    });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-*/
-
-
-
-
-
-/* ── MULTER STORAGE CONFIGURATION ── */
-/*const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-}
-
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, UPLOADS_DIR);
-  },
-  filename: function (req, file, cb) {
-    // Generates a unique timeline timestamp prefix to avoid filename collision drops
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
-const upload = multer({ 
-  storage: storage,
-  limits: { fileSize: 5 * 1024 * 1024 } // 5MB Limit cap
-});
-*/
-/* ── MULTIPART FILE UPLOAD ENDPOINT ── */
-// Ensure 'image' matches the name appended inside formData in your frontend index.html script block!
-/*app.post('/api/upload', upload.single('image'), (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ success: false, error: 'No file received by backend server structure.' });
-    }
-    
-    // Generates the static file relative url link
-    const fileUrl = '/uploads/' + req.file.filename;
-    
-    res.json({
-      success: true,
-      message: 'Asset verified and saved.',
-      url: fileUrl,
-      filename: req.file.filename
-    });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-
-const express = require('express');
-const multer = require('multer');*/
-/*const cors = require('cors');
-const path = require('path');
-
-const app = express();
-app.use(cors());
-app.use(express.json());
-*/
-/* ── CLOUDINARY CONFIGURATION ── */
-// Get these free credentials by signing up at Cloudinary.com
-/*cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_NAME || 'dosxpozyt',
-  api_key:    process.env.CLOUDINARY_KEY  || '231858439383224',
-  api_secret: process.env.CLOUDINARY_SECRET || '*********************************'
-});
-*/
-/* ── ROUTE MULTER STORAGE DIRECTLY TO THE CLOUD ── */
-
-
-
-/* ── POST /api/upload ── */
-app.post('/api/upload', upload.single('image'), (req, res) => {
-  try {
-    if (!req.file || !req.file.path) {
-      return res.status(400).json({ success: false, error: 'No file received by the server.' });
-    }
-    
-    // req.file.path is now a permanent global HTTPS URL provided by Cloudinary
-    res.json({
-      success: true,
-      message: 'Image securely saved to Cloud Storage!',
-      url: req.file.path 
-    });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-
-/* ── API ENDPOINTS FOR CROSS-DEVICE SYNCHRONIZATION ───────────── */
-
-// 1. Authentication APIs
+// User Registration API
 app.post('/api/register', (req, res) => {
+  DATA_STORE = loadGlobalData();
   const { name, address, phone, email, password } = req.body;
   if (!name || !phone || !email || !password) {
     return res.status(400).json({ success: false, message: 'Please fill in all required fields.' });
@@ -407,10 +136,13 @@ app.post('/api/register', (req, res) => {
   }
   const newUser = { id: Date.now().toString(), name, address, phone, email, password };
   DATA_STORE.users.push(newUser);
+  saveGlobalData(DATA_STORE);
   res.json({ success: true, message: 'Registration successful!', user: newUser });
 });
 
+// User Login API
 app.post('/api/login', (req, res) => {
+  DATA_STORE = loadGlobalData();
   const { name, password } = req.body;
   const user = DATA_STORE.users.find(u => u.name === name && u.password === password);
   if (!user) {
@@ -419,7 +151,9 @@ app.post('/api/login', (req, res) => {
   res.json({ success: true, message: 'Login successful.', user });
 });
 
+// Admin Authentication Gateway API
 app.post('/api/admin-login', (req, res) => {
+  DATA_STORE = loadGlobalData();
   const { password } = req.body;
   if (password === DATA_STORE.adminPassword) {
     res.json({ success: true });
@@ -428,12 +162,15 @@ app.post('/api/admin-login', (req, res) => {
   }
 });
 
-// 2. Core Dashboard System APIs
+// Client Dashboard Menu Access API
 app.get('/api/menu', (req, res) => {
+  DATA_STORE = loadGlobalData();
   res.json({ success: true, menuItems: DATA_STORE.menuItems });
 });
 
+// Order Submission API
 app.post('/api/orders', (req, res) => {
+  DATA_STORE = loadGlobalData();
   const { user, items, total, eventDate, remarks, payment, callbackRequested } = req.body;
   if (!user || !items || items.length === 0) {
     return res.status(400).json({ success: false, message: 'Order cannot be empty.' });
@@ -451,38 +188,54 @@ app.post('/api/orders', (req, res) => {
     createdAt: new Date().toLocaleString()
   };
   DATA_STORE.orders.push(newOrder);
+  saveGlobalData(DATA_STORE);
   res.json({ success: true, message: 'Order placed successfully!', order: newOrder });
 });
 
-// 3. Admin Management Dash APIs
+/* ── ADMIN MANAGEMENT APIs ── */
+
+// Central Sync Pipeline (Forces cross-device operational tracking views)
 app.get('/api/admin/data', (req, res) => {
+  DATA_STORE = loadGlobalData();
   res.json({
     success: true,
     orders: DATA_STORE.orders,
     users: DATA_STORE.users,
     menuItems: DATA_STORE.menuItems,
-    combos: DATA_STORE.combos
+    combos: DATA_STORE.combos || []
   });
 });
 
+// Create/Update Menu Items from Admin Panel
+app.post('/api/admin/add-item', (req, res) => {
+  DATA_STORE = loadGlobalData();
+  const { name, type, price, desc, image } = req.body;
+  
+  const newItem = {
+    id: Date.now().toString(),
+    name,
+    type,
+    price: parseFloat(price),
+    desc,
+    image: image || "" // Takes the structural absolute Cloudinary cloud url string
+  };
+  
+  DATA_STORE.menuItems.push(newItem);
+  saveGlobalData(DATA_STORE);
+  res.json({ success: true, menuItems: DATA_STORE.menuItems });
+});
+
+// Change Master Password API
 app.post('/api/admin/change-password', (req, res) => {
+  DATA_STORE = loadGlobalData();
   const { password } = req.body;
   if (!password) return res.status(400).json({ success: false, message: 'Password missing.' });
   DATA_STORE.adminPassword = password;
+  saveGlobalData(DATA_STORE);
   res.json({ success: true, message: 'Password updated successfully!' });
 });
 
-/* ── Ensure uploads directory structure exists safely ─────────── */
-//const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
-if (!fs.existsSync(UPLOADS_DIR)) {
-  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-}
-
-//app.listen(PORT, () => console.log(`EXPRESS Server running globally on port ${PORT}`));
-// Ensure this matches at the top of your server.js
-//const PORT = process.env.PORT || 10000; 
-
-// Ensure this is the ONLY app.listen block at the very bottom of your server.js
+/* ── GLOBAL SERVER LIFECYCLE CONTROLLER ── */
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`EXPRESS Sync Server listening dynamically on port ${PORT}`);
 });
