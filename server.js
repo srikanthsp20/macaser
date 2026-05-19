@@ -40,12 +40,60 @@ let DATA_STORE = {
 app.get('/', (req, res) => {
    res.sendFile(path.join(__dirname, 'index.html'));
 });
-/* ── MULTER STORAGE CONFIGURATION ── */
+/* ── MULTER HARD DRIVE ALLOCATION ── */
 const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
 if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
-/*
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, UPLOADS_DIR);
+  },
+  filename: function (req, file, cb) {
+    // Prefix filenames with a timestamp to prevent overwriting duplicate files
+    const uniquePrefix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniquePrefix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limits
+});
+
+/* ── UPLOAD ENDPOINT ROUTE ── */
+// 'upload.single('image')' MUST capture the exact key string sent via your FormData
+app.post('/api/upload', upload.single('image'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No file reached the server pipeline.' });
+    }
+    
+    // Construct the static file path string
+    const relativeUrlPath = '/uploads/' + req.file.filename;
+    
+    res.json({
+      success: true,
+      message: 'Asset saved successfully.',
+      url: relativeUrlPath
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+
+
+
+
+
+/* ── MULTER STORAGE CONFIGURATION ── */
+/*const UPLOADS_DIR = path.join(__dirname, 'public', 'uploads');
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, UPLOADS_DIR);
