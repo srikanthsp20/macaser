@@ -25,6 +25,12 @@ app.use(express.urlencoded({ extended: true }));
 // Serve frontend assets directly from root or public folder
 app.use(express.static(__dirname));
 app.use(express.static(path.join(__dirname, 'public')));
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_NAME,
+  api_key:    process.env.CLOUDINARY_KEY,
+  api_secret: process.env.CLOUDINARY_SECRET
+});
+
 
 /* ── IN-MEMORY PERSISTENT STORE (Blueprint for Global Operations) ── */
 let DATA_STORE = {
