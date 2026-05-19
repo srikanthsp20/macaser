@@ -13,7 +13,7 @@ const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
 const app  = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 
 app.use(cors());
 app.use(express.json());
@@ -478,4 +478,11 @@ if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
 
-app.listen(PORT, () => console.log(`EXPRESS Server running globally on port ${PORT}`));
+//app.listen(PORT, () => console.log(`EXPRESS Server running globally on port ${PORT}`));
+// Ensure this matches at the top of your server.js
+//const PORT = process.env.PORT || 10000; 
+
+// Ensure this is the ONLY app.listen block at the very bottom of your server.js
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`EXPRESS Sync Server listening dynamically on port ${PORT}`);
+});
