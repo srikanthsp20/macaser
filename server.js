@@ -98,12 +98,12 @@ app.use(express.json());
 */
 /* ── CLOUDINARY CONFIGURATION ── */
 // Get these free credentials by signing up at Cloudinary.com
-cloudinary.config({
+/*cloudinary.config({
   cloud_name: process.env.CLOUDINARY_NAME || 'dosxpozyt',
   api_key:    process.env.CLOUDINARY_KEY  || '231858439383224',
   api_secret: process.env.CLOUDINARY_SECRET || '*********************************'
 });
-
+*/
 /* ── ROUTE MULTER STORAGE DIRECTLY TO THE CLOUD ── */
 const cloudStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
