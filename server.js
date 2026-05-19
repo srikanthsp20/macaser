@@ -196,7 +196,7 @@ const upload = multer({ storage: storage });
 app.use(express.static(path.join(__dirname, 'public')));
 
 /* ── IN-MEMORY PERSISTENT STORE (Blueprint for Global Operations) ── */
-let DATA_STORE = {
+/*let DATA_STORE = {
   users: [],
   orders: [],
   menuItems: [
@@ -208,7 +208,7 @@ let DATA_STORE = {
   combos: [],
   adminPassword: "admin"
 };
-
+*/
 /* ── PAGE BASE ROUTE ─────────────────────────────────────────── */
 app.get('/', (req, res) => {
    res.sendFile(path.join(__dirname, 'index.html'));
