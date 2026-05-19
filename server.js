@@ -76,7 +76,7 @@ if (!fs.existsSync(UPLOADS_DIR)) {
   fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 }
 
-const storage = multer.diskStorage({
+/*const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, UPLOADS_DIR);
   },
@@ -86,7 +86,7 @@ const storage = multer.diskStorage({
     cb(null, uniquePrefix + path.extname(file.originalname));
   }
 });
-
+*/
 const cloudStorage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
