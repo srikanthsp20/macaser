@@ -9,6 +9,150 @@ const multer   = require('multer');
 const path     = require('path');
 const fs       = require('fs');
 const cors     = require('cors');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+
+const app  = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(__dirname));
+
+// ── PERSISTENT FILE PATH (Must sit on a Render Persistent Disk to survive restarts) ──
+const DB_FILE = path.join(__dirname, 'public', 'uploads', 'db_store.json');
+
+// Helper to safely load data
+function loadGlobalData() {
+  try {
+    if (fs.existsSync(DB_FILE)) {
+      return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
+    }
+  } catch (e) {
+    console.error("Error reading db file, falling back to defaults", e);
+  }
+  return {
+    users: [],
+    orders: [],
+    menuItems: [
+      { id: "1", name: "Idli Sambar", type: "Breakfast", price: 80, desc: "Soft fluffy steamed rice cakes.", image: "" },
+      { id: "2", name: "Masala Dosa", type: "Breakfast", price: 100, desc: "Crispy crepe filled with potato mash.", image: "" }
+    ],
+    adminPassword: "admin"
+  };
+}
+
+// Helper to safely save data
+function saveGlobalData(data) {
+  try {
+    fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
+  } catch (e) {
+    console.error("Failed to write persistence file to disk:", e);
+  }
+}
+
+// Initialize store
+let DATA_STORE = loadGlobalData();
+
+/* ── CLOUDINARY CONFIG ── */
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_NAME,
+  api_key:    process.env.CLOUDINARY_KEY,
+  api_secret: process.env.CLOUDINARY_SECRET
+});
+
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'mangalam_menu',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp']
+  }
+});
+const upload = multer({ storage: storage });
+
+/* ── RE-SYNCHRONIZED CORE API ENDPOINTS ── */
+
+// Fetch Admin Data Engine (Called by other devices continuously)
+app.get('/api/admin/data', (req, res) => {
+  // Always refresh memory layer from disk before serving external devices
+  DATA_STORE = loadGlobalData();
+  res.json({
+    success: true,
+    orders: DATA_STORE.orders,
+    users: DATA_STORE.users,
+    menuItems: DATA_STORE.menuItems
+  });
+});
+
+// Update Menu Items with Cloudinary URL
+app.post('/api/admin/add-item', (req, res) => {
+  DATA_STORE = loadGlobalData();
+  const { name, type, price, desc, image } = req.body;
+  
+  const newItem = {
+    id: Date.now().toString(),
+    name,
+    type,
+    price: parseFloat(price),
+    desc,
+    image: image // This must be the absolute https://res.cloudinary.com link!
+  };
+  
+  DATA_STORE.menuItems.push(newItem);
+  saveGlobalData(DATA_STORE); // Write instantly to shared file
+  res.json({ success: true, menuItems: DATA_STORE.menuItems });
+});
+
+// Post Order Endpoint
+app.post('/api/orders', (req, res) => {
+  DATA_STORE = loadGlobalData();
+  const { user, items, total, eventDate, remarks } = req.body;
+  
+  const newOrder = {
+    id: "MNG-" + Math.floor(1000 + Math.random() * 9000),
+    user,
+    items,
+    total,
+    eventDate,
+    remarks,
+    status: 'Pending',
+    createdAt: new Date().toLocaleString()
+  };
+  
+  DATA_STORE.orders.push(newOrder);
+  saveGlobalData(DATA_STORE);
+  res.json({ success: true, message: 'Order placed successfully!', order: newOrder });
+});
+
+// Cloudinary Upload API
+app.post('/api/upload', upload.single('image'), (req, res) => {
+  if (!req.file || !req.file.path) {
+    return res.status(400).json({ success: false, error: 'Cloudinary upload failed.' });
+  }
+  res.json({ success: true, url: req.file.path });
+});
+
+app.listen(PORT, () => console.log(`Sync Server listening on ${PORT}`));
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+const express  = require('express');
+const multer   = require('multer');
+const path     = require('path');
+const fs       = require('fs');
+const cors     = require('cors');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
@@ -42,14 +186,13 @@ const storage = new CloudinaryStorage({
     };
   }
 });
-
 const upload = multer({ storage: storage });
-
+*/
 
 
 
 // Serve frontend assets directly from root or public folder
-app.use(express.static(__dirname));
+//app.use(express.static(__dirname));
 app.use(express.static(path.join(__dirname, 'public')));
 
 /* ── IN-MEMORY PERSISTENT STORE (Blueprint for Global Operations) ── */
