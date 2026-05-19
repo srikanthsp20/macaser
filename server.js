@@ -60,6 +60,18 @@ const storage = multer.diskStorage({
     cb(null, uniquePrefix + path.extname(file.originalname));
   }
 });
+
+const cloudStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'mangalam_menu', 
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+    transformation: [{ width: 600, height: 400, crop: 'limit' }] // Auto-resizes for fast mobile loading
+  }
+});
+
+
+
 /*
 const upload = multer({ 
   storage: storage,
@@ -155,14 +167,6 @@ app.use(express.json());
 });
 */
 /* ── ROUTE MULTER STORAGE DIRECTLY TO THE CLOUD ── */
-const cloudStorage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'mangalam_menu', 
-    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
-    transformation: [{ width: 600, height: 400, crop: 'limit' }] // Auto-resizes for fast mobile loading
-  }
-});
 
 
 
