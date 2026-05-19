@@ -13,24 +13,44 @@ const cors     = require('cors');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
-const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-
-
 // Enable cross-device processing middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve frontend assets directly from root or public folder
-app.use(express.static(__dirname));
-app.use(express.static(path.join(__dirname, 'public')));
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const multer = require('multer');
+
+// Secure Configuration mapping
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_NAME,
   api_key:    process.env.CLOUDINARY_KEY,
   api_secret: process.env.CLOUDINARY_SECRET
 });
 
+// Streamlined cloud storage layout
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: async (req, file) => {
+    return {
+      folder: 'mangalam_menu',
+      // Explicitly matching the exact allowed parameters expected by Cloudinary's validator
+      allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+      // We pass transformation properties directly in an array format to resolve string formatting glitches
+      transformation: [{ width: 600, height: 400, crop: 'limit' }]
+    };
+  }
+});
+
+const upload = multer({ storage: storage });
+
+
+
+
+// Serve frontend assets directly from root or public folder
+app.use(express.static(__dirname));
+app.use(express.static(path.join(__dirname, 'public')));
 
 /* ── IN-MEMORY PERSISTENT STORE (Blueprint for Global Operations) ── */
 let DATA_STORE = {
@@ -83,7 +103,7 @@ const upload = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB limits
 });*/
-const upload = multer({ storage: cloudStorage });
+//const upload = multer({ storage: cloudStorage });
 /* ── UPLOAD ENDPOINT ROUTE ── */
 // 'upload.single('image')' MUST capture the exact key string sent via your FormData
 
