@@ -13,7 +13,7 @@ const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
 const app  = express();
-const PORT = process.env.PORT || 10000;
+const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
@@ -133,7 +133,7 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
   res.json({ success: true, url: req.file.path });
 });
 
-app.listen(PORT, () => console.log(`Sync Server listening on ${PORT}`));
+//app.listen(PORT, () => console.log(`Sync Server listening on ${PORT}`));
 
 
 
