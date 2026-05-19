@@ -13,6 +13,10 @@ const cors     = require('cors');
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+
+
 // Enable cross-device processing middleware
 app.use(cors());
 app.use(express.json());
@@ -61,7 +65,7 @@ const upload = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB limits
 });*/
-
+const upload = multer({ storage: cloudStorage });
 /* ── UPLOAD ENDPOINT ROUTE ── */
 // 'upload.single('image')' MUST capture the exact key string sent via your FormData
 app.post('/api/upload', upload.single('image'), (req, res) => {
@@ -135,8 +139,6 @@ const upload = multer({
 
 const express = require('express');
 const multer = require('multer');*/
-const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
 /*const cors = require('cors');
 const path = require('path');
 
@@ -162,7 +164,7 @@ const cloudStorage = new CloudinaryStorage({
   }
 });
 
-const upload = multer({ storage: cloudStorage });
+
 
 /* ── POST /api/upload ── */
 app.post('/api/upload', upload.single('image'), (req, res) => {
