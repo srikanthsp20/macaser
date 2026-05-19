@@ -56,11 +56,11 @@ const storage = multer.diskStorage({
     cb(null, uniquePrefix + path.extname(file.originalname));
   }
 });
-
+/*
 const upload = multer({ 
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB limits
-});
+});*/
 
 /* ── UPLOAD ENDPOINT ROUTE ── */
 // 'upload.single('image')' MUST capture the exact key string sent via your FormData
