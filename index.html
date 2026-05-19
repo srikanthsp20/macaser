@@ -1327,7 +1327,46 @@ function switchImgTab(tab) {
   if(tab==='library') loadImgLibrary();
 }
 
-  async function handleImgFileUpload(inputElement) {
+  async function handleImgFileUpload() {
+  const fileInput = document.getElementById('mi-img-file');
+  const statusDiv = document.getElementById('img-upload-status');
+  
+  if (!fileInput || !fileInput.files[0]) return;
+  const file = fileInput.files[0];
+
+  if (statusDiv) statusDiv.innerHTML = `<span style="color:var(--muted)">Uploading directly to cloud...</span>`;
+
+  const formData = new FormData();
+  // CRITICAL: Must be exactly 'image' to match the server.js upload.single('image')
+  formData.append('image', file); 
+
+  try {
+    const res = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData
+      // NO Content-Type headers here! Let the browser calculate the binary boundary.
+    });
+
+    const data = await res.json();
+
+    if (data.success) {
+      if (statusDiv) statusDiv.innerHTML = `<span style="color:var(--success)">&#10003; Uploaded to Cloudinary!</span>`;
+      // Set the hidden input value to the Cloudinary absolute URL string
+      if (document.getElementById('mi-img')) {
+        document.getElementById('mi-img').value = data.url;
+      }
+    } else {
+      if (statusDiv) statusDiv.innerHTML = `<span style="color:var(--danger)">&#215; Upload failed: ${data.error}</span>`;
+    }
+  } catch (err) {
+    console.error("Network error layer caught:", err);
+    if (statusDiv) statusDiv.innerHTML = `<span style="color:var(--danger)">&#215; Connection dropped. Check Render server logs.</span>`;
+  }
+}
+  
+  
+  
+  /*async function handleImgFileUpload(inputElement) {
   const file = inputElement.files[0];
   const statusDiv = document.getElementById('img-upload-status');
   
@@ -1371,7 +1410,7 @@ function switchImgTab(tab) {
   
   
   
-  /*async function handleImgFileUpload(inputElement) {
+  async function handleImgFileUpload(inputElement) {
   const file = inputElement.files[0];
   const statusDiv = document.getElementById('img-upload-status');
   
