@@ -627,8 +627,8 @@ DB.def('users', []);
 DB.def('orders', []);
 DB.def('admin_pw', 'admin');
 DB.def('menu_items', [
-  {id:'i1',name:'Idli Sambar',desc:'Soft steamed rice cakes with spiced lentil soup and chutneys',price:80,type:'Breakfast',img:'D:\pix\idlis.jpg'},
-  {id:'i2',name:'Masala Dosa',desc:'Crispy crepe filled with spiced potato stuffing',price:100,type:'Breakfast',img:'D:\pix\dosas1.jpeg'},
+  {id:'i1',name:'Idli Sambar',desc:'Soft steamed rice cakes with spiced lentil soup and chutneys',price:80,type:'Breakfast',img:''},
+  {id:'i2',name:'Masala Dosa',desc:'Crispy crepe filled with spiced potato stuffing',price:100,type:'Breakfast',img:''},
   {id:'i3',name:'Pongal',desc:'Comforting rice and lentil porridge with pepper and ghee',price:90,type:'Breakfast',img:''},
   {id:'i4',name:'Veg Meals',desc:'Full South Indian lunch with rice, sambar, rasam, kootu and papad',price:180,type:'Lunch',img:''},
   {id:'i5',name:'Curd Rice',desc:'Cooling curd rice tempered with mustard and curry leaves',price:80,type:'Lunch',img:''},
@@ -664,13 +664,44 @@ var cartCombos   = {};     /* {comboId: {combo, qty}} */
 /* ================================================================
    NAVIGATION
 ================================================================ */
-function showPage(name) {
+
+
+
+
+
+  
+async function showPage(pageId) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const targetPage = document.getElementById('page-' + pageId);
+  if(targetPage) targetPage.classList.add('active');
+  
+  // Device-Sync check for User Dashboards
+  if (pageId === 'dashboard') {
+    // Explicitly fetch the freshly updated menu items array from the cloud server
+    const res = await fetch('/api/admin/data');
+    const data = await res.json();
+    if (data.success) {
+      allMenuItems = data.menuItems;
+      renderGlobalMenuGrid(); 
+    }
+  }
+
+  // Device-Sync check for Admin Dashboards
+  if (pageId === 'admin') {
+    // Force cross-device fetch for orders instantly when page loads
+    loadAdminDashboard();
+  }
+}
+  
+ /* 
+  
+  function showPage(name) {
   document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
   var pg = document.getElementById('page-'+name);
   if(pg) pg.classList.add('active');
   updateNav(name);
   window.scrollTo({top:0,behavior:'smooth'});
-}
+}*/
 
 function goHome(){ showPage('home'); }
 
@@ -1646,7 +1677,7 @@ let currentSelection = {};
 let allMenuItems = [];
 
 // Navigation Engine
-function showPage(pageId) {
+/*function showPage(pageId) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const targetPage = document.getElementById('page-' + pageId);
   if(targetPage) targetPage.classList.add('active');
@@ -1659,7 +1690,7 @@ function showPage(pageId) {
     loadAdminDashboard();
   }
 }
-
+*/
 function goHome() { showPage('home'); }
 
 /* ── USER ACCOUNT REGISTRATION ── */
@@ -1714,7 +1745,38 @@ async function doLogin() {
   }
 }
 
-/* ── MENU INTERACTION LAYER ── */
+
+
+
+
+  
+function renderGlobalMenuGrid() {
+  const grid = document.getElementById('menu-grid-wrap');
+  grid.innerHTML = '';
+  
+  allMenuItems.forEach(item => {
+    // Fallback placeholder icon if image link is missing
+    const imgStyle = item.image ? `src="${item.image}"` : `src="placeholder.png"`;
+    
+    grid.innerHTML += `
+      <div class="menu-card">
+        <img ${imgStyle} class="menu-card-img" style="width:100%; height:150px; object-fit:cover;" />
+        <div class="menu-card-body">
+          <h4>${item.name}</h4>
+          <p>${item.desc}</p>
+          <span>&#8377;${item.price}</span>
+        </div>
+      </div>`;
+  });
+}
+  
+  
+  
+  
+  
+  
+  
+  /* ── MENU INTERACTION LAYER ── */
 async function loadMenuGrid() {
   try {
     const res = await fetch(`${API_BASE}/api/menu`);
