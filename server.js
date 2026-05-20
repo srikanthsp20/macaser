@@ -38,7 +38,7 @@ const DB_FILE = path.join(UPLOADS_DIR, 'db_store.json');
 
 //
 // Helper to safely load data from disk file
-function loadGlobalData() {console.log("In Load Global data################");
+function loadGlobalData() {//console.log("In Load Global data################");
   try {
     if (fs.existsSync(DB_FILE)) {
       return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
