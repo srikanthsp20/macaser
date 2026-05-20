@@ -62,7 +62,7 @@ function loadGlobalData() {
 
 // Helper to safely save data to disk file
 function saveGlobalData(data) {
-  try {console.log("In SaveGlobalData......$$$$$$$$$$$$$$$$");
+  try {//console.log("In SaveGlobalData......$$$$$$$$$$$$$$$$");
     fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
   } catch (e) {
     console.error("Failed to write persistence file to disk:", e);
@@ -187,7 +187,7 @@ app.post('/api/orders', (req, res) => {
     callbackRequested: callbackRequested || false,
     status: 'Pending',
     createdAt: new Date().toLocaleString()
-  };console.log("In orders..++++++++++++");
+  };//console.log("In orders..++++++++++++");
   DATA_STORE.orders.push(newOrder);
   saveGlobalData(DATA_STORE);
   res.json({ success: true, message: 'Order placed successfully!', order: newOrder });
