@@ -39,7 +39,7 @@ const DB_FILE = path.join(UPLOADS_DIR, 'db_store.json');
 // Helper to safely load data from disk file
 function loadGlobalData() {
   try {
-    if (fs.existsSync(DB_FILE)) {
+    if (fs.existsSync(DB_FILE)) {console.log("In Load Global data################");
       return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
     }
   } catch (e) {
@@ -61,7 +61,7 @@ function loadGlobalData() {
 
 // Helper to safely save data to disk file
 function saveGlobalData(data) {
-  try {
+  try {console.log("In SaveGlobalData......$$$$$$$$$$$$$$$$");
     fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
   } catch (e) {
     console.error("Failed to write persistence file to disk:", e);
@@ -186,7 +186,7 @@ app.post('/api/orders', (req, res) => {
     callbackRequested: callbackRequested || false,
     status: 'Pending',
     createdAt: new Date().toLocaleString()
-  };
+  };console.log("In orders..++++++++++++");
   DATA_STORE.orders.push(newOrder);
   saveGlobalData(DATA_STORE);
   res.json({ success: true, message: 'Order placed successfully!', order: newOrder });
@@ -203,7 +203,7 @@ app.get('/api/admin/data', (req, res) => {
     users: DATA_STORE.users,
     menuItems: DATA_STORE.menuItems,
     combos: DATA_STORE.combos || []
-  });
+  });console.log("Creoss-Device Trackg Views....");
 });
 
 // Create/Update Menu Items from Admin Panel
