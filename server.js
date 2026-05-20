@@ -257,7 +257,7 @@ app.post('/api/admin/change-password', (req, res) => {
 
 
 
-const PORT = process.env.PORT || 3000;  
+//const PORT = process.env.PORT || 3000;  
 /* ── GLOBAL SERVER LIFECYCLE CONTROLLER ── */
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`EXPRESS Sync Server listening dynamically on port ${PORT}`);
