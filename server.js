@@ -36,10 +36,11 @@ if (!fs.existsSync(UPLOADS_DIR)) {
 }
 const DB_FILE = path.join(UPLOADS_DIR, 'db_store.json');
 
+console.log("In Load Global data################");
 // Helper to safely load data from disk file
 function loadGlobalData() {
   try {
-    if (fs.existsSync(DB_FILE)) {console.log("In Load Global data################");
+    if (fs.existsSync(DB_FILE)) {
       return JSON.parse(fs.readFileSync(DB_FILE, 'utf8'));
     }
   } catch (e) {
