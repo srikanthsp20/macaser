@@ -613,6 +613,14 @@ footer a{color:var(--gold);text-decoration:none;}
 </footer>
 
 <script>
+
+
+
+  // Dynamically inherits production host context upon deployment, falling back to local instances
+const API_BASE = window.location.origin; 
+// ── UPDATED FOR MULTI-DEVICE LOCAL NETWORK ACCESS ──
+// This automatically extracts whatever IP address or web domain you typed into the address bar!
+
 /* ================================================================
    DATA STORE  –  localStorage
 ================================================================ */
@@ -1973,9 +1981,12 @@ function admTab(tabName, btn) {
    DEPLOYMENT INFRASTRUCTURE & BACKEND BINDING 
 ================================================================ */
 
-// Dynamically inherits production host context upon deployment, falling back to local instances
-const API_BASE = window.location.origin; 
 
+
+// ── UPDATED FOR MULTI-DEVICE LOCAL NETWORK ACCESS ──
+// This automatically extracts whatever IP address or web domain you typed into the address bar!
+
+  
 // Storage states for user carting matrix
 let currentMealType = 'Breakfast';
 let currentSelectionMode = 'items'; // 'items' or 'combos'
