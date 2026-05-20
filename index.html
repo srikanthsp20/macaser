@@ -1573,7 +1573,7 @@ function switchImgTab(tab) {
       statusEl.innerHTML = '<span style="color:var(--danger);">&#10005; Network error. Is the server running?</span>';
       input.value='';
     });
-}*/
+}
 
 function applyImgUrl() {
   var val = (document.getElementById('mi-img-url').value||'').trim();
@@ -2104,6 +2104,21 @@ function clearImgSelection() {
 }
 
   
+// Automatically executes when any device loads your platform URL
+window.addEventListener('DOMContentLoaded', () => {
+  console.log("Mangalam Catering UI fully instantiated.");
+  
+  // 1. Kick off an automatic fetch request to render available menus globally
+  if (typeof refreshDashboardMenu === 'function') {
+    refreshDashboardMenu();
+  } else if (typeof loadMenuItems === 'function') {
+    loadMenuItems();
+  }
+
+  // 2. Default target viewing route: Forces the landing view to display cleanly on screen
+  showPage('dashboard'); 
+});
+
 </script>
 
 
