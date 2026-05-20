@@ -1052,6 +1052,7 @@ function renderAdminOrders() {
 function viewOrder(orderId) {
   var orders = DB.get('orders')||[];
   var o = orders.find(function(x){ return x.id===orderId; });
+  console.log("In VIEW ORDERS.HTML%%%%%%%%%%%%%%%%%%%%%%%%");
   if(!o) return;
   var itemsHtml='';
   (o.selected_items||[]).forEach(function(i){ itemsHtml+='<div style="font-size:.85rem;padding:.25rem 0;">'+esc(i.name)+' &#215; '+i.qty+' = '+rupee(i.price*i.qty)+'</div>'; });
@@ -1485,7 +1486,7 @@ function switchImgTab(tab) {
     console.error("Upload error details:", err);
     statusDiv.innerHTML = `<span style="color:var(--danger)">&#215; Network error- Is server running?</span>`;
   }
-}
+}*/
   
   
   
