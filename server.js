@@ -36,7 +36,26 @@ if (!fs.existsSync(UPLOADS_DIR)) {
 }
 const DB_FILE = path.join(UPLOADS_DIR, 'db_store.json');
 
-//
+
+
+
+
+// ── CORRECTED EXPRESS MIDDLEWARE ORDER ──
+
+// 1. FIRST Priority: Explicitly serve the root index.html file for the base path
+app.get('/', (req, res) => {
+   res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+// 2. SECOND Priority: Serve static assets (like folders or styles) from public frameworks safely
+app.use(express.static(__dirname));
+app.use(express.static(path.join(__dirname, 'public')));
+app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
+
+
+
+
+
 // Helper to safely load data from disk file
 function loadGlobalData() {//console.log("In Load Global data################");
   try {
@@ -93,11 +112,11 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB File constraint cap
 });
 
-/* ── MAIN ROOT APPLICATION ROUTE ── */
+/* ── MAIN ROOT APPLICATION ROUTE ── 
 app.get('/', (req, res) => {
    res.sendFile(path.join(__dirname, 'index.html'));
 });
-
+*/
 /* ── ERROR-HANDLING SECURE FILE UPLOAD API ── */
 app.post('/api/upload', (req, res) => {
   upload.single('image')(req, res, function (err) {
@@ -236,6 +255,9 @@ app.post('/api/admin/change-password', (req, res) => {
   res.json({ success: true, message: 'Password updated successfully!' });
 });
 
+
+
+const PORT = process.env.PORT || 3000;  
 /* ── GLOBAL SERVER LIFECYCLE CONTROLLER ── */
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`EXPRESS Sync Server listening dynamically on port ${PORT}`);
